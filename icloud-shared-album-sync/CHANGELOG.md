@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.3
+
+- Accept Apple's numbered public-album partition hosts, such as `p51-ckdatabasews.icloud.com`, including China-region endpoints.
+- Preserve existing supported hosts, HTTPS and anonymous-token requirements, and rejection of lookalike domains.
+- Add mocked album-resolution regressions; live Apple synchronization still requires verification on Home Assistant.
+
 ## 1.2.2
 
 - Normalize new custom folder names to lowercase dashboard-safe slugs; reuse existing configured folders without renaming their media or dashboard paths.

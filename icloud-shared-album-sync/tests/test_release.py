@@ -55,6 +55,70 @@ class ReleaseTests(unittest.TestCase):
             with self.assertRaises(sync.SyncError):
                 client.list_album('https://www.icloud.com/sharedalbum/#synthetic', 0, 0)
 
+    def test_modern_album_queries_apple_partition_hosts(self):
+        for host in (
+            'ckdatabasews.icloud.com', 'p1.ckdatabasews.icloud.com',
+            'p51-ckdatabasews.icloud.com', 'p123-ckdatabasews.icloud.com',
+            'ckdatabasews.icloud.com.cn', 'p1.ckdatabasews.icloud.com.cn',
+            'p51-ckdatabasews.icloud.com.cn',
+        ):
+            with self.subTest(host=host):
+                client = sync.ICloudClient(40)
+                partition = f'https://{host}'
+                zone = {'zoneName': 'synthetic-zone'}
+                resolved = {'results': [{
+                    'anonymousPublicAccess': {
+                        'token': 'synthetic-token', 'databasePartition': partition,
+                    },
+                    'zoneID': zone,
+                }]}
+                with patch.object(client, '_cloudkit_post',
+                                  side_effect=[resolved, {'records': []}]) as post:
+                    self.assertEqual(client.list_album(
+                        'https://photos.icloud.com/shared/album/synthetic', 0, 0), [])
+                self.assertEqual(post.call_count, 2)
+                url, payload, params = post.call_args.args
+                self.assertEqual(url, f'{partition}/database/1/com.apple.photos.cloud'
+                                      '/production/shared/records/query')
+                self.assertEqual(payload['zoneID'], zone)
+                self.assertEqual(params['publicAccessAuthToken'], 'synthetic-token')
+
+    def test_modern_album_rejects_untrusted_partitions_before_sending_token(self):
+        for partition in (
+            'http://p51-ckdatabasews.icloud.com',
+            'https://p51-ckdatabasews.icloud.com.attacker.test',
+            'https://p51-ckdatabasews.icloud.com.cn.attacker.test',
+            'https://attacker-ckdatabasews.icloud.com',
+            'https://p51-ckdatabasewsXicloud.com',
+            'https://attacker.icloud.com',
+            '',
+        ):
+            with self.subTest(partition=partition):
+                client = sync.ICloudClient(40)
+                resolved = {'results': [{
+                    'anonymousPublicAccess': {
+                        'token': 'synthetic-token', 'databasePartition': partition,
+                    },
+                    'zoneID': {},
+                }]}
+                with patch.object(client, '_cloudkit_post', return_value=resolved) as post:
+                    with self.assertRaisesRegex(sync.SyncError, 'invalid public media endpoint'):
+                        client._modern_public_album('synthetic', 0, 0)
+                post.assert_called_once()
+
+    def test_modern_album_still_requires_anonymous_token(self):
+        client = sync.ICloudClient(40)
+        resolved = {'results': [{
+            'anonymousPublicAccess': {
+                'databasePartition': 'https://p51-ckdatabasews.icloud.com',
+            },
+            'zoneID': {},
+        }]}
+        with patch.object(client, '_cloudkit_post', return_value=resolved) as post:
+            with self.assertRaisesRegex(sync.SyncError, 'invalid public media endpoint'):
+                client._modern_public_album('synthetic', 0, 0)
+        post.assert_called_once()
+
     def test_repeated_modern_page_marker_fails_closed(self):
         client = sync.ICloudClient(40)
         resolved = {'results': [{'anonymousPublicAccess': {'token': 'synthetic',
@@ -62,7 +126,7 @@ class ReleaseTests(unittest.TestCase):
         with patch.object(client, '_cloudkit_post', side_effect=[resolved,
                 {'records': [], 'continuationMarker': 'again'},
                 {'records': [], 'continuationMarker': 'again'}]):
-            with self.assertRaises(sync.SyncError):
+            with self.assertRaisesRegex(sync.SyncError, 'repeated a pagination marker'):
                 client._modern_public_album('synthetic', 0, 0)
 
     def test_request_error_does_not_expose_signed_url(self):

@@ -22,13 +22,13 @@ This Home Assistant app downloads the best available photo or video for every it
 - Works with both current `photos.icloud.com/shared/album/…` links and legacy iCloud Public Website links
 - Works with `/config/www`, `/media`, or `/share`
 
-Current release: **1.2.2**. Upgrading from 1.0.2 changes the options schema and supported architectures; read the [migration instructions](icloud-shared-album-sync/DOCS.md#updating-from-102-to-122) before updating.
+Current release: **1.2.3**. This fork of [BZPJoe's app](https://github.com/BZPJoe/icloud-shared-album-sync-repo) fixes validation of Apple's numbered public-album partition hosts. Upgrading from 1.0.2 changes the options schema and supported architectures; read the [migration instructions](icloud-shared-album-sync/DOCS.md#updating-from-102-to-122) before updating.
 
 ## Install
 
 1. In Home Assistant, open **Settings → Apps → Install app**.
 2. Open the three-dot menu and select **Repositories**.
-3. Add `https://github.com/BZPJoe/icloud-shared-album-sync-repo`.
+3. Add `https://github.com/chrdavis/icloud-shared-album-sync-repo`.
 4. Find and install **iCloud Shared Album Sync**.
 5. In its **Configuration** tab, add at least one public iCloud Shared Album URL.
 
